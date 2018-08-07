@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="warn" name="yanhua_collector" packages="com.chinamcloud.haihe.flume.sink">
+    <Properties>
+        <Property name="baseDir">D:\soft\apache-flume-1.8.0-bin</Property>
+    </Properties>
+    <Appenders>
+        <RollingFile name="RollingFile" fileName="${baseDir}/tmp/tmp-data.log"
+                     filePattern="${baseDir}/data/$${date:yyyyMMddHHmmss}-%i.log">
+            <Policies>
+                <CronTriggeringPolicy schedule="0 */30 * * * ? *" evaluateOnStartup="true"/>
+            </Policies>
+            <DefaultRolloverStrategy>
+                <Delete basePath="${baseDir}/data" maxDepth="1">
+                    <ScriptCondition>
+                        <Script name="superstitious" language="groovy">
+                            <![CDATA[
+            	import java.text.SimpleDateFormat
+				def result = [];
+				def pattern = ~/^\d{14}-\d*\.log\.COMPLETED/;
+				def liveTs = 5*1000*60*60*24;
+				def final current = System.currentTimeMillis();
+				def format = new SimpleDateFormat("yyyyMMddHHmmss");
+				def nowTs = System.currentTimeMillis();
+				pathList.each { pathWithAttributes ->
+				  def relative = basePath.relativize pathWithAttributes.path
+				  if(relative.toString().matches(pattern)){
+					  def date = format.parse(relative.toString().substring(0,14))
+					  if(nowTs-date.getTime()>liveTs){
+						  result.add pathWithAttributes
+					  }
+				  }
+				}
+				result;
+            ]]>
+                        </Script>
+                    </ScriptCondition>
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+    </Appenders>
+    <Loggers>
+        <Root level="info">
+            <AppenderRef ref="RollingFile"/>
+        </Root>
+    </Loggers>
+</Configuration>
